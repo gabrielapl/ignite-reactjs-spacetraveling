@@ -15,6 +15,7 @@ import { RichText } from 'prismic-dom';
 interface Post {
   uid?: string;
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     subtitle?: string;
@@ -71,11 +72,15 @@ export default function Post({ post }: PostProps) {
         <article className={commonStyles.container}>
           <h1>{post.data.title}</h1>
           <div className={styles.details}>
-            <time><FiCalendar size="20" /> {format(new Date(post.first_publication_date),	"dd MMM yyyy", {
-                locale: ptBR})}
-            </time>
-            <p><FiUser size="20" /> {post.data.author}</p>
-            <time><FiClock size="20" /> {readingTime} min</time>
+            <div>
+              <time><FiCalendar size="20" /> {format(new Date(post.first_publication_date),	"dd MMM yyyy", {
+                  locale: ptBR})}
+              </time>
+              <p><FiUser size="20" /> {post.data.author}</p>
+              <time><FiClock size="20" /> {readingTime} min</time>
+            </div>
+            <p>* editado em {format(new Date(post.last_publication_date),	"dd MMM yyyy, 'às' HH:mm", {
+                  locale: ptBR})}</p>
           </div>
           {
             post.data.content.map(item => (
@@ -90,6 +95,23 @@ export default function Post({ post }: PostProps) {
           }
         </article>
       </main>
+      <footer className={commonStyles.container} >
+        <div className={commonStyles.divider} ></div>
+        <div className={styles.navigationPost}>
+          <div>
+            <a className={styles.buttonNavigation} >
+              <p>como utilizar Hooks</p>
+              <p>Post anterior</p>
+            </a>
+          </div>
+          <div>
+            <a className={styles.buttonNavigation}>
+              <p>como utilizar Hooks</p>
+              <p>Próximo post</p>
+            </a>
+          </div>
+        </div>
+      </footer>
     </>
   )
 }
@@ -134,6 +156,7 @@ export const getStaticProps: GetStaticProps<PostProps> = async context => {
       content: response.data.content
     },
     first_publication_date: response.first_publication_date,
+    last_publication_date: response.last_publication_date
   }
 
   return {
