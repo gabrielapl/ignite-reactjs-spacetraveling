@@ -11,6 +11,7 @@ import { useRouter } from 'next/router';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RichText } from 'prismic-dom';
+import { PostComment } from '../../components/PostComment';
 
 interface Post {
   uid?: string;
@@ -111,6 +112,7 @@ export default function Post({ post }: PostProps) {
             </a>
           </div>
         </div>
+        <PostComment />
       </footer>
     </>
   )
