@@ -12,6 +12,7 @@ import { RichText } from 'prismic-dom';
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
 import { GetStaticProps } from 'next';
+import { PreviewButton } from '../components/previewButton';
 
 interface Post {
   uid?: string;
@@ -30,16 +31,17 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+  preview: boolean;
 }
 
-export default function Home({ postsPagination }: HomeProps) {
+export default function Home({ postsPagination, preview }: HomeProps) {
   const [posts, setPosts] = useState(postsPagination.results);
   const [nextPost, setNextPage] = useState(postsPagination.next_page);
 
   async function handleMorePosts() {
 
     const response = await fetch(nextPost).then( response => response.json());
-
+    debugger
     const newPost = response.results.map(post => {
       return {
         uid: post.uid,
@@ -85,20 +87,28 @@ export default function Home({ postsPagination }: HomeProps) {
               <button type="button" onClick={handleMorePosts} >Carregar mais posts</button>
             )
           }
+          {preview && (
+          <PreviewButton />
+		      )}
         </main>
+        
     </>
   )
 }
 
-export const getStaticProps: GetStaticProps<HomeProps> = async () => {
+export const getStaticProps: GetStaticProps<HomeProps> = async ({
+  preview = false,
+  previewData = null
+}) => {
   const prismic = getPrismicClient();
   const postsResponse = await prismic.query([
     Prismic.predicates.at("document.type", "posts")
   ], {
     fetch: ['post.title', 'post.subtitle', 'post.author'],
     pageSize: 1,
+    ref: previewData?.ref ?? null,
   });
-
+  console.log(previewData)
   const result = postsResponse.results.map(post => {
     return {
       uid: post.uid,
@@ -118,7 +128,8 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
 
   return {
     props: {
-      postsPagination
+      postsPagination,
+      preview
     },
     revalidate: 60 * 5,
   }

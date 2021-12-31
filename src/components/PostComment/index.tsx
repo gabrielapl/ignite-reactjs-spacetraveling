@@ -16,5 +16,5 @@ export function PostComment() {
     anchor.appendChild(script);
   }, []);
 
-  return <div id="inject-comments-for-uterances" />;
+  return <div id="inject-comments-for-uterances"/>;
 }

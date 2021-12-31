@@ -12,21 +12,23 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RichText } from 'prismic-dom';
 import { PostComment } from '../../components/PostComment';
+import Link from 'next/link';
+import { PreviewButton } from '../../components/previewButton';
 
 interface Post {
   uid?: string;
-  first_publication_date: string | null;
-  last_publication_date: string | null;
-  data: {
-    title: string;
+  first_publication_date?: string | null;
+  last_publication_date?: string | null;
+  data?: {
+    title?: string;
     subtitle?: string;
-    banner: {
+    banner?: {
       url: string;
     };
-    author: string;
-    content: {
-      heading: string;
-      body: {
+    author?: string;
+    content?: {
+      heading?: string;
+      body?: {
         text: string;
       }[];
     }[];
@@ -35,9 +37,12 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  preview: boolean;
+  previousPost?: Post;
+  nextPost?: Post;
 }
 
-export default function Post({ post }: PostProps) {
+export default function Post({ post, preview, nextPost, previousPost }: PostProps) {
   debugger
   const router = useRouter();
   if (router.isFallback) {
@@ -99,20 +104,33 @@ export default function Post({ post }: PostProps) {
       <footer className={commonStyles.container} >
         <div className={commonStyles.divider} ></div>
         <div className={styles.navigationPost}>
-          <div>
-            <a className={styles.buttonNavigation} >
-              <p>como utilizar Hooks</p>
-              <p>Post anterior</p>
-            </a>
-          </div>
-          <div>
-            <a className={styles.buttonNavigation}>
-              <p>como utilizar Hooks</p>
-              <p>Próximo post</p>
-            </a>
-          </div>
+          {
+            previousPost &&
+            <div>
+              <Link href={`/post/${previousPost.uid}`}>
+                <a className={styles.buttonNavigation} >
+                  <p>{previousPost.data.title}</p>
+                  <p>Post anterior</p>
+                </a>
+              </Link>
+            </div>
+          }
+          {
+            nextPost &&
+            <div>
+              <Link href={`/post/${nextPost.uid}`}>
+                <a className={styles.buttonNavigation}>
+                <p>{previousPost.data.title}</p>
+                  <p>Próximo post</p>
+                </a>
+              </Link>
+            </div>
+          }
         </div>
         <PostComment />
+        {preview && (
+          <PreviewButton />
+		    )}
       </footer>
     </>
   )
@@ -139,12 +157,48 @@ export const getStaticPaths: GetStaticPaths = async () => {
   
 };
 
-export const getStaticProps: GetStaticProps<PostProps> = async context => {
+export const getStaticProps: GetStaticProps<PostProps> = async ({
+  params, preview = false, previewData = {}
+}) => {
 
-  const { slug } = context.params;
+  const { slug } = params;
 
   const prismic = getPrismicClient();
-  const response = await prismic.getByUID('posts', String(slug), {});
+  const response = await prismic.getByUID('posts', String(slug), {
+    ref: previewData?.ref ?? null,
+  });
+
+  if (!response) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  const previousResponse = await prismic.query(
+    [Prismic.predicates.at('document.type', 'posts')],
+    {
+      fetch: ['post.title'],
+      after: response.id,
+      orderings: '[document.first_publication_date desc]',
+      pageSize: 1,
+      ref: previewData?.ref ?? null,
+    }
+  );
+  
+  const nextResponse = await prismic.query(
+    [Prismic.predicates.at('document.type', 'posts')],
+    {
+      fetch: ['post.title'],
+      after: response.id,
+      orderings: '[document.first_publication_date]',
+      pageSize: 1,
+      ref: previewData?.ref ?? null,
+    }
+  );
+
 
   const post: Post = {
     uid: response.uid,
@@ -161,9 +215,26 @@ export const getStaticProps: GetStaticProps<PostProps> = async context => {
     last_publication_date: response.last_publication_date
   }
 
+  const previousPost: Post = {
+    uid: previousResponse.results[0].uid,
+    data: {
+      title: previousResponse.results[0].data.title,
+    }
+  }
+
+  const nextPost: Post = {
+    uid: previousResponse.results[0].uid,
+    data: {
+      title: previousResponse.results[0].data.title,
+    }
+  }
+
   return {
     props: {
-      post
+      post,
+      previousPost: previousResponse.results.length ? previousPost : null,
+      nextPost: nextResponse.results.length ? nextPost : null,
+      preview
     },
     revalidate: 60 * 5
   }
